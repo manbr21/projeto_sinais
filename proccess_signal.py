@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import butter, filtfilt, find_peaks
-from hampel import hampel
 import wfdb
 import ast
 import pywt
