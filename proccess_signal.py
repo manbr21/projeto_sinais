@@ -10,6 +10,7 @@ import pywt
 import wfdb.plot
 import wfdb.processing
 
+
 def apply_filters_with_padding(signal, fs):
     pad_size = 200  # ou fs//2, por exemplo
 
@@ -62,78 +63,99 @@ sampling_rate=100
 # load and convert annotation data
 Y = pd.read_csv(path+'filtered_database.csv', index_col='ecg_id')
 
-# Load raw signal data
-X = load_raw_data(Y, sampling_rate, path)
+# # Load raw signal data
+# X = load_raw_data(Y, sampling_rate, path)
 
-#testando para um eletrocardiograma
-arr = []
-for data in X:
-    #parametros
-    fs = data.fs
-    duration = data.sig_len / fs
-    t = np.linspace(0, duration, data.sig_len)
+# #testando para um eletrocardiograma
+# arr = []
+# for data in X:
+#     #parametros
+#     fs = data.fs
+#     duration = data.sig_len / fs
+#     t = np.linspace(0, duration, data.sig_len)
 
-    #sinal
-    ecg = data.p_signal[:,1] #canal II do ECG
+#     #sinal
+#     ecg = data.p_signal[:,1] #canal II do ECG
 
-    ecg_f = apply_filters_with_padding(ecg, fs)
+#     ecg_f = apply_filters_with_padding(ecg, fs)
 
-    #picos r
-    #distancia minima entre batimentos
-    r_peaks, _ = find_peaks(ecg_f, distance=int(fs * 0.6))
+#     #picos r
+#     #distancia minima entre batimentos
+#     r_peaks, _ = find_peaks(ecg_f, distance=int(fs * 0.6))
 
-    #intervalos RR
-    rr_intervals = np.diff(r_peaks) / fs
-    mean_rr = np.mean(rr_intervals)
-    std_rr = np.std(rr_intervals)
-    #heart_rate = 60 / mean_rr #bpm
+#     # 100 * 0.2
+#     q_index = []
+#     for i in range(len(r_peaks)):
+#         q_index.append(np.argmin(ecg_f[max(r_peaks[i]-20,0):r_peaks[i]]) + max(r_peaks[i]-20,0))
 
-    #dominio frequencia
-    segment = ecg_f[:fs * 5]
-    fft_vals = np.abs(np.fft.fft(segment))
-    fft_freqs = np.fft.fftfreq(len(segment), 1/fs)
-    pos_mask = fft_freqs > 0
-    fft_vals = fft_vals[pos_mask]
-    fft_freqs = fft_freqs[pos_mask]
-
-    #energia
-    band_energy = {
-        'low': np.sum(fft_vals[(fft_freqs >= 0.5) & (fft_freqs < 4)]),
-        'mid': np.sum(fft_vals[(fft_freqs >= 4) & (fft_freqs < 15)]),
-        'high': np.sum(fft_vals[(fft_freqs >= 15) & (fft_freqs < 40)]),
-    }
-
-    peak_freq = fft_freqs[np.argmax(fft_vals)]
-
-    #features
-    features = {
-        'mean_rr_interval_s': mean_rr,
-        'std_rr_interval_s': std_rr,
-        'band_energy_low': band_energy['low'],
-        'band_energy_mid': band_energy['mid'],
-        'band_energy_high': band_energy['high'],
-        'dominant_frequency_Hz': peak_freq
-    }
-    arr.append(features)
+#     # search_index = [x for x in r_peaks-(int (fs * 0.2))] ## | ou |
+#     # q_peaks = []
+#     # for i in range(len(search_index)):
+#     #     q_peaks.append(np.argmin(ecg_f[max(search_index[i],0):r_peaks[i]]))
     
-features_df = pd.DataFrame(arr, index=Y.index)
-Y_MERGE = pd.merge(Y, features_df, on=Y.index, how='outer')
+#     print(q_index)
+#     #intervalos RR
+#     rr_intervals = np.diff(r_peaks) / fs
+#     mean_rr = np.mean(rr_intervals)
+#     std_rr = np.std(rr_intervals)
+#     #heart_rate = 60 / mean_rr #bpm
 
-Y_FINAL = Y_MERGE.drop(columns=['key_0','filename_lr'])
+#     #dominio frequencia
+#     segment = ecg_f[:fs * 5]
+#     fft_vals = np.abs(np.fft.fft(segment))
+#     fft_freqs = np.fft.fftfreq(len(segment), 1/fs)
+#     pos_mask = fft_freqs > 0
+#     fft_vals = fft_vals[pos_mask]
+#     fft_freqs = fft_freqs[pos_mask]
 
-Y_FINAL.to_csv("features.csv")
-print("csv criado corretamente")
+#     #energia
+#     band_energy = {
+#         'low': np.sum(fft_vals[(fft_freqs >= 0.5) & (fft_freqs < 4)]),
+#         'mid': np.sum(fft_vals[(fft_freqs >= 4) & (fft_freqs < 15)]),
+#         'high': np.sum(fft_vals[(fft_freqs >= 15) & (fft_freqs < 40)]),
+#     }
 
-# plt.figure(figsize=(12, 4))
-# plt.plot(t, ecg_f, label='ECG', color='orange')
-# plt.plot(t[r_peaks], ecg_f[r_peaks], 'ro', label='Picos R')
-# plt.title('Sinal de ECG com Picos R Detectados')
-# plt.xlabel('Tempo (s)')
-# plt.ylabel('Amplitude (mV)')
-# plt.legend()
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
+#     peak_freq = fft_freqs[np.argmax(fft_vals)]
+
+#     #features
+#     features = {
+#         'mean_rr_interval_s': mean_rr,
+#         'std_rr_interval_s': std_rr,
+#         'band_energy_low': band_energy['low'],
+#         'band_energy_mid': band_energy['mid'],
+#         'band_energy_high': band_energy['high'],
+#         'dominant_frequency_Hz': peak_freq
+#     }
+#     arr.append(features)
+    
+# features_df = pd.DataFrame(arr, index=Y.index)
+# Y_MERGE = pd.merge(Y, features_df, on=Y.index, how='outer')
+
+# Y_FINAL = Y_MERGE.drop(columns=['key_0','filename_lr'])
+
+# Y_FINAL.to_csv("features.csv")
+# print("csv criado corretamente")
+
+t = np.linspace(0, 10, 1000)
+ecg = wfdb.rdrecord("records100/00000/00001_lr")
+ecg_f = apply_filters_with_padding(ecg.p_signal[:,1], 100)
+r_peaks, _ = find_peaks(ecg_f, distance=int(100 * 0.6))
+
+    # 100 * 0.2
+q_index = []
+for i in range(len(r_peaks)):
+    q_index.append(np.argmin(ecg_f[max(r_peaks[i]-20,0):r_peaks[i]]) + max(r_peaks[i]-20,0))
+
+plt.figure(figsize=(12, 4))
+plt.plot(t, ecg_f, label='ECG', color='orange')
+plt.plot(t[r_peaks], ecg_f[r_peaks], 'ro', label='Picos R')
+plt.title('Sinal de ECG com Picos R Detectados')
+plt.xlabel('Tempo (s)')
+plt.ylabel('Amplitude (mV)')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
 
 # for k, v in features.items():
 #     print(f"{k}: {v}")
