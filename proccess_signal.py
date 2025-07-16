@@ -74,7 +74,7 @@ for data in X:
     t = np.linspace(0, duration, data.sig_len)
 
     #sinal
-    ecg = data.p_signal[:,1]
+    ecg = data.p_signal[:,1] #canal II do ECG
 
     ecg_f = apply_filters_with_padding(ecg, fs)
 
@@ -86,7 +86,7 @@ for data in X:
     rr_intervals = np.diff(r_peaks) / fs
     mean_rr = np.mean(rr_intervals)
     std_rr = np.std(rr_intervals)
-    heart_rate = 60 / mean_rr #bpm
+    #heart_rate = 60 / mean_rr #bpm
 
     #dominio frequencia
     segment = ecg_f[:fs * 5]
@@ -109,7 +109,6 @@ for data in X:
     features = {
         'mean_rr_interval_s': mean_rr,
         'std_rr_interval_s': std_rr,
-        'heart_rate_bpm': heart_rate,
         'band_energy_low': band_energy['low'],
         'band_energy_mid': band_energy['mid'],
         'band_energy_high': band_energy['high'],
