@@ -73,7 +73,7 @@ def PSD(ecg_f,fs,low_interval, mid_interval, high_interval):
 
 def extract_r_peaks(ecg_f,distance,height,th_amp, th_samp):
     r_peaks, _ = find_peaks(ecg_f, distance=distance, height=height)
-    r_peaks = r_peaks[ecg_f[r_peaks] >= th_amp]
+    #r_peaks = r_peaks[ecg_f[r_peaks] >= th_amp]
     r_peaks = r_peaks[r_peaks >= 40]
     r_peaks = r_peaks[r_peaks <= th_samp]
     #heart_rate = 60 / mean_rr #bpm
@@ -156,7 +156,7 @@ def extract_intervals(x_peak, fs):
 
     return [x_intervals, mean_x, std_x]
 
-def extract_features(data, fs, duration, sig_len, ch):
+def extract_features(data, fs, ch, tolerance_num):
     full_ch_features = []
     for i in ch:
         ecg = data.p_signal[:,i]
@@ -165,41 +165,43 @@ def extract_features(data, fs, duration, sig_len, ch):
         #peaks
         r_peaks = extract_r_peaks(ecg_f, int(100*0.6), np.mean(ecg_f), 0.15, 959)
 
-        q_peaks, s_peaks, p_peaks, t_peaks = extract_peaks(ecg_f, r_peaks)
-        plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks])
+        if len(r_peaks) >= tolerance_num:
+            #print(r_peaks)
+            q_peaks, s_peaks, p_peaks, t_peaks = extract_peaks(ecg_f, r_peaks)
+            #plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks])
 
-        #intervalos
-        rr_intervals, mean_rr, std_rr = extract_intervals(r_peaks, fs)
-        qq_intervals, mean_qq, std_qq = extract_intervals(q_peaks, fs)
-        ss_intervals, mean_ss, std_ss = extract_intervals(s_peaks, fs)
-        pp_intervals, mean_pp, std_pp = extract_intervals(p_peaks, fs)
-        tt_intervals, mean_tt, std_tt = extract_intervals(t_peaks, fs)
+            #intervalos
+            rr_intervals, mean_rr, std_rr = extract_intervals(r_peaks, fs)
+            qq_intervals, mean_qq, std_qq = extract_intervals(q_peaks, fs)
+            ss_intervals, mean_ss, std_ss = extract_intervals(s_peaks, fs)
+            pp_intervals, mean_pp, std_pp = extract_intervals(p_peaks, fs)
+            tt_intervals, mean_tt, std_tt = extract_intervals(t_peaks, fs)
 
-        band_energy, peak_freq = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
+            band_energy, peak_freq = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
 
-        ch_name = give_name(i)
+            ch_name = give_name(i)
 
-        features = {
-            f'mean_rr_interval_s_{ch_name}': mean_rr,
-            f'std_rr_interval_s_{ch_name}': std_rr,
-            f'mean_qq_interval_s_{ch_name}': mean_qq,
-            f'std_qq_interval_s_{ch_name}': std_qq,
-            f'mean_ss_interval_s_{ch_name}': mean_ss,
-            f'std_ss_interval_s_{ch_name}': std_ss,
-            f'mean_pp_interval_s_{ch_name}': mean_pp,
-            f'std_pp_interval_s_{ch_name}': std_pp,
-            f'mean_tt_interval_s_{ch_name}': mean_tt,
-            f'std_tt_interval_s_{ch_name}': std_tt,
-            f'band_energy_low_{ch_name}': band_energy['low'],
-            f'band_energy_mid_{ch_name}': band_energy['mid'],
-            f'band_energy_high_{ch_name}': band_energy['high'],
-            f'dominant_frequency_Hz_{ch_name}': peak_freq
-        }
-        full_ch_features.append(features)
-    
-    new_feat = {}
-    for i in full_ch_features:
-        new_feat.update(i)
+            features = {
+                f'mean_rr_interval_s_{ch_name}': mean_rr,
+                f'std_rr_interval_s_{ch_name}': std_rr,
+                f'mean_qq_interval_s_{ch_name}': mean_qq,
+                f'std_qq_interval_s_{ch_name}': std_qq,
+                f'mean_ss_interval_s_{ch_name}': mean_ss,
+                f'std_ss_interval_s_{ch_name}': std_ss,
+                f'mean_pp_interval_s_{ch_name}': mean_pp,
+                f'std_pp_interval_s_{ch_name}': std_pp,
+                f'mean_tt_interval_s_{ch_name}': mean_tt,
+                f'std_tt_interval_s_{ch_name}': std_tt,
+                f'band_energy_low_{ch_name}': band_energy['low'],
+                f'band_energy_mid_{ch_name}': band_energy['mid'],
+                f'band_energy_high_{ch_name}': band_energy['high'],
+                f'dominant_frequency_Hz_{ch_name}': peak_freq
+            }
+            full_ch_features.append(features)
+        
+        new_feat = {}
+        for i in full_ch_features:
+            new_feat.update(i)
     
     return new_feat
 
@@ -208,6 +210,32 @@ def test_one_signal(name, ch):
     feat = extract_features(ecg, ecg.fs, ecg.sig_len / ecg.fs, ecg.sig_len, channels)
     return feat
 
+def generate_csv(Y, path, tolerance_num, ch):
+    # Load raw signal data
+    X = load_raw_data(Y, sampling_rate, path)
+
+    arr = []
+    for data in X:
+        #parametros
+        fs = data.fs
+        duration = data.sig_len / fs
+        t = np.linspace(0, duration, data.sig_len)
+
+        #sinal
+        features = extract_features(data, fs, channels, tolerance_num)
+        arr.append(features)
+        
+    features_df = pd.DataFrame(arr, index=Y.index)
+    Y_MERGE = pd.merge(Y, features_df, on=Y.index, how='outer')
+
+    # for i in ch:
+    #     col = f'mean_rr_interval_s_{give_name(i)}'
+    #     Y_MERGE = Y_MERGE[Y_MERGE[col].notna()]
+
+    Y_FINAL = Y_MERGE.drop(columns=['key_0', 'filename_lr'])
+
+    Y_FINAL.to_csv("features.csv")
+    print("csv criado corretamente")
 
 path = '/home/manbr/Documents/EC/5p/sinais_sistemas/projeto/bd_sinais/'
 sampling_rate=100
@@ -216,31 +244,18 @@ sampling_rate=100
 Y = pd.read_csv(path + 'filtered_database.csv', index_col='ecg_id')
 
 #parameters
-channels = [1,8]
+channels = [1,2,5,6,7,8]
 
-#test_feat = test_one_signal(path + "records100/16000/16967_lr", channels)
+# test_feat = test_one_signal(path + "records100/00000/00177_lr", channels)
 
-# # Load raw signal data
-X = load_raw_data(Y, sampling_rate, path)
+# test = wfdb.rdrecord(path + "records100/00000/00175_lr")
+# plot_ecg(test.p_signal, sampling_rate, 10,1000)
 
-arr = []
-for data in X:
-    #parametros
-    fs = data.fs
-    duration = data.sig_len / fs
-    t = np.linspace(0, duration, data.sig_len)
+# test = wfdb.rdrecord(path + "records100/00000/00001_lr")
+# plot_ecg(test.p_signal, sampling_rate, 10,1000)
 
-    #sinal
-    features = extract_features(data, fs, duration, data.sig_len, channels)
-    arr.append(features)
-    
-features_df = pd.DataFrame(arr, index=Y.index)
-Y_MERGE = pd.merge(Y, features_df, on=Y.index, how='outer')
-
-Y_FINAL = Y_MERGE.drop(columns=['key_0','filename_lr'])
-
-Y_FINAL.to_csv("features.csv")
-print("csv criado corretamente")
+tolerance_num = 5 # quantos picos devem ser detectados pra considerarmos um sinal válido
+generate_csv(Y, path, tolerance_num, channels)
 
 # for k, v in features.items():
 #     print(f"{k}: {v}")
