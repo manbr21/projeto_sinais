@@ -12,12 +12,22 @@ agg_df = agg_df[agg_df.diagnostic == 1]
 
 def aggregate_diagnostic(y_dic):
     tmp = []
-    for key in y_dic.keys():
-        if key in agg_df.index:
-            if agg_df.loc[key].diagnostic_class == "NORM" or agg_df.loc[key].diagnostic_class == "MI" or agg_df.loc[key].diagnostic_class == "CD":
-                tmp.append(agg_df.loc[key].diagnostic_class)
+    app = []
+
+    for value in y_dic.values():
+        if value != 0:
+            app.append(value)
     
-    return list(set(tmp))
+    if len(app) == 1:
+        for key in y_dic.keys():
+            #print(y_dic.values())
+            if key in agg_df.index:
+                if (agg_df.loc[key].diagnostic_class == "NORM" or agg_df.loc[key].diagnostic_class == "MI" or agg_df.loc[key].diagnostic_class == "CD"):
+                    tmp.append(agg_df.loc[key].diagnostic_class)
+    
+        return list(set(tmp))
+
+    return []
 
 # Apply diagnostic superclass
 Y['diagnostic_superclass'] = Y.scp_codes.apply(aggregate_diagnostic)
