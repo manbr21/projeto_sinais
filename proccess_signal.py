@@ -177,6 +177,15 @@ def extract_intervals(x_peak, fs):
 
     return [x_intervals, mean_x, std_x]
 
+def get_qrs_intervals(qrs_wave): 
+    # (a,b) -> b-a
+
+    qrs_i = [(x[1] - x[0]) for x in qrs_wave]
+
+    mean = np.mean(qrs_i)
+    std = np.std(qrs_i)
+    return [mean,std]
+
 def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
     full_ch_features = []
     for i in ch:
@@ -189,7 +198,7 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
         if len(r_peaks) >= tolerance_num:
             #print(r_peaks)
             q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave = extract_peaks(ecg_f, r_peaks)
-            plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave])
+            # plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave])
 
             #intervalos
             rr_intervals, mean_rr, std_rr = extract_intervals(r_peaks, fs)
@@ -198,6 +207,7 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
             pp_intervals, mean_pp, std_pp = extract_intervals(p_peaks, fs)
             tt_intervals, mean_tt, std_tt = extract_intervals(t_peaks, fs)
             
+            mean_qrs, std_qrs = get_qrs_intervals(qrs_wave)
 
             band_energy, peak_freq = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
 
@@ -214,6 +224,8 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
                 f'std_pp_interval_s_{ch_name}': std_pp,
                 f'mean_tt_interval_s_{ch_name}': mean_tt,
                 f'std_tt_interval_s_{ch_name}': std_tt,
+                f'mean_qrs_{ch_name}':mean_qrs,
+                f'std_qrs_{ch_name}':std_qrs,
                 f'band_energy_low_{ch_name}': band_energy['low'],
                 f'band_energy_mid_{ch_name}': band_energy['mid'],
                 f'band_energy_high_{ch_name}': band_energy['high'],
@@ -264,10 +276,10 @@ if __name__ == "__main__":
 
     # load and convert annotation data
     Y = pd.read_csv(path + 'filtered_database.csv', index_col='ecg_id')
-    # generate_csv(Y, path, tolerance_num, channels)
+    generate_csv(Y, path, tolerance_num, channels)
 
     # test one signal
-    test_feat = test_one_signal(path + "records100\\00000\\00016_lr", channels, tolerance_num)
+    # test_feat = test_one_signal(path + "records100\\00000\\00016_lr", channels, tolerance_num)
 
     # plot ecg
     # test = wfdb.rdrecord(path + "records100/00000/00175_lr")
