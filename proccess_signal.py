@@ -81,13 +81,24 @@ def extract_r_peaks(ecg_f,distance,height,th_amp, th_samp):
     return r_peaks
 
 def extract_peaks(ecg_f,r_peaks):
+    start_qrs = []
+    end_qrs = []
+    
     q_peaks = []
     for i in range(len(r_peaks)):
         q_peaks.append(np.argmin(ecg_f[max(r_peaks[i]-20,0):r_peaks[i]]) + max(r_peaks[i]-20,0))
+        # extracting qrs starts
+        dxdy = np.gradient(ecg_f)
+        dxdy = dxdy[max(q_peaks[-1] - 5, 0): q_peaks[-1]-1]
+        start_qrs.append(np.argmin(dxdy) + max(q_peaks[-1] - 5, 0))
 
     s_peaks = []
     for i in range(len(r_peaks)):
         s_peaks.append(np.argmin(ecg_f[r_peaks[i]:min(r_peaks[i]+12,999)]) + r_peaks[i])
+        dxdy = np.gradient(ecg_f)
+        dxdy = dxdy[s_peaks[-1]+1 : min(s_peaks[-1] + 5, 999)]
+        end_qrs.append(np.argmin(dxdy) + s_peaks[-1])
+        
 
     p_peaks = []
     for i in range(len(q_peaks)):
@@ -97,7 +108,11 @@ def extract_peaks(ecg_f,r_peaks):
     for i in range(len(r_peaks)):
         t_peaks.append(np.argmax(ecg_f[min(s_peaks[i]+3, 999):min(r_peaks[i]+40,999)]) + s_peaks[i]+3)
 
-    return [q_peaks, s_peaks, p_peaks, t_peaks]
+    qrs_peaks = []
+    for i in range(len(r_peaks)):
+        qrs_peaks.append((start_qrs[i], end_qrs[i]))
+
+    return [q_peaks, s_peaks, p_peaks, t_peaks, qrs_peaks]
 
 def give_name(i):
     if i == 0:
@@ -116,7 +131,11 @@ def give_name(i):
         return f"V{i-5}"
 
 def plot_with_peaks(ecg_f, duration, sig_len, peaks):
-    r_peaks, q_peaks, s_peaks, p_peaks, t_peaks = peaks
+    r_peaks, q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave = peaks
+
+    qrs_s = [x[0] for x in qrs_wave]
+    qrs_e = [x[1] for x in qrs_wave]
+
     t = np.linspace(0, duration, sig_len)
     plt.figure(figsize=(12, 4))
     plt.plot(t, ecg_f, label='ECG', color='orange')
@@ -125,6 +144,8 @@ def plot_with_peaks(ecg_f, duration, sig_len, peaks):
     plt.plot(t[s_peaks], ecg_f[s_peaks], 'gx', label='Picos S')
     plt.plot(t[p_peaks], ecg_f[p_peaks], 'cx', label='Picos P')
     plt.plot(t[t_peaks], ecg_f[t_peaks], 'kx', label='Picos T')
+    plt.plot(t[qrs_s], ecg_f[qrs_s], 'mx', label='Picos QRS_S')
+    plt.plot(t[qrs_e], ecg_f[qrs_e], 'yx', label='Picos QRS_E')
     plt.title('Sinal de ECG com Picos PQRST')
     plt.xlabel('Tempo (s)')
     plt.ylabel('Amplitude (mV)')
@@ -167,8 +188,8 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
 
         if len(r_peaks) >= tolerance_num:
             #print(r_peaks)
-            q_peaks, s_peaks, p_peaks, t_peaks = extract_peaks(ecg_f, r_peaks)
-            plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks])
+            q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave = extract_peaks(ecg_f, r_peaks)
+            plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave])
 
             #intervalos
             rr_intervals, mean_rr, std_rr = extract_intervals(r_peaks, fs)
@@ -176,6 +197,7 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
             ss_intervals, mean_ss, std_ss = extract_intervals(s_peaks, fs)
             pp_intervals, mean_pp, std_pp = extract_intervals(p_peaks, fs)
             tt_intervals, mean_tt, std_tt = extract_intervals(t_peaks, fs)
+            
 
             band_energy, peak_freq = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
 
@@ -245,7 +267,7 @@ if __name__ == "__main__":
     # generate_csv(Y, path, tolerance_num, channels)
 
     # test one signal
-    test_feat = test_one_signal(path + "records100\\00000\\00177_lr", channels, tolerance_num)
+    test_feat = test_one_signal(path + "records100\\00000\\00016_lr", channels, tolerance_num)
 
     # plot ecg
     # test = wfdb.rdrecord(path + "records100/00000/00175_lr")
