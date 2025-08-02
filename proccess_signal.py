@@ -156,7 +156,7 @@ def extract_intervals(x_peak, fs):
 
     return [x_intervals, mean_x, std_x]
 
-def extract_features(data, fs, ch, tolerance_num):
+def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
     full_ch_features = []
     for i in ch:
         ecg = data.p_signal[:,i]
@@ -168,7 +168,7 @@ def extract_features(data, fs, ch, tolerance_num):
         if len(r_peaks) >= tolerance_num:
             #print(r_peaks)
             q_peaks, s_peaks, p_peaks, t_peaks = extract_peaks(ecg_f, r_peaks)
-            #plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks])
+            plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks])
 
             #intervalos
             rr_intervals, mean_rr, std_rr = extract_intervals(r_peaks, fs)
@@ -205,9 +205,9 @@ def extract_features(data, fs, ch, tolerance_num):
     
     return new_feat
 
-def test_one_signal(name, ch):
+def test_one_signal(name, ch, tolerance_num):
     ecg = wfdb.rdrecord(name)
-    feat = extract_features(ecg, ecg.fs, ecg.sig_len / ecg.fs, ecg.sig_len, channels)
+    feat = extract_features(ecg, ecg.fs, ch, tolerance_num, ecg.sig_len / ecg.fs, ecg.sig_len)
     return feat
 
 def generate_csv(Y, path, tolerance_num, ch):
@@ -222,51 +222,31 @@ def generate_csv(Y, path, tolerance_num, ch):
         t = np.linspace(0, duration, data.sig_len)
 
         #sinal
-        features = extract_features(data, fs, channels, tolerance_num)
+        features = extract_features(data, fs, channels, tolerance_num, data.sig_len / data.fs, data.sig_len)
         arr.append(features)
         
     features_df = pd.DataFrame(arr, index=Y.index)
     Y_MERGE = pd.merge(Y, features_df, on=Y.index, how='outer')
-
-    # for i in ch:
-    #     col = f'mean_rr_interval_s_{give_name(i)}'
-    #     Y_MERGE = Y_MERGE[Y_MERGE[col].notna()]
 
     Y_FINAL = Y_MERGE.drop(columns=['key_0', 'filename_lr'])
 
     Y_FINAL.to_csv("features.csv")
     print("csv criado corretamente")
 
-path = '/home/manbr/Documents/EC/5p/sinais_sistemas/projeto/bd_sinais/'
-sampling_rate=100
+if __name__ == "__main__":
+    #parameters
+    channels = [1,2,5,6,7,8] # channels to extract features
+    tolerance_num = 5 # quantos picos devem ser detectados pra considerarmos um sinal válido
+    path = '' # replace to your path
+    sampling_rate=100 # 100hz or 500hz
 
-# load and convert annotation data
-Y = pd.read_csv(path + 'filtered_database.csv', index_col='ecg_id')
+    # load and convert annotation data
+    Y = pd.read_csv(path + 'filtered_database.csv', index_col='ecg_id')
+    # generate_csv(Y, path, tolerance_num, channels)
 
-#parameters
-channels = [1,2,5,6,7,8]
+    # test one signal
+    test_feat = test_one_signal(path + "records100\\00000\\00177_lr", channels, tolerance_num)
 
-# test_feat = test_one_signal(path + "records100/00000/00177_lr", channels)
-
-# test = wfdb.rdrecord(path + "records100/00000/00175_lr")
-# plot_ecg(test.p_signal, sampling_rate, 10,1000)
-
-# test = wfdb.rdrecord(path + "records100/00000/00001_lr")
-# plot_ecg(test.p_signal, sampling_rate, 10,1000)
-
-tolerance_num = 5 # quantos picos devem ser detectados pra considerarmos um sinal válido
-generate_csv(Y, path, tolerance_num, channels)
-
-# for k, v in features.items():
-#     print(f"{k}: {v}")
-
-
-
-# Split data into train and test
-# test_fold = 10
-# # Train
-# X_train = X[np.where(Y.strat_fold != test_fold)]
-# y_train = Y[(Y.strat_fold != test_fold)].diagnostic_superclass
-# # Test
-# X_test = X[np.where(Y.strat_fold == test_fold)]
-# y_test = Y[Y.strat_fold == test_fold].diagnostic_superclass
+    # plot ecg
+    # test = wfdb.rdrecord(path + "records100/00000/00175_lr")
+    # plot_ecg(test.p_signal, sampling_rate, 10,1000)
