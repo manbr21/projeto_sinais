@@ -4,3 +4,5 @@ matplotlib
 pandas
 PyWavelets
 scipy
+scikit-learn
+seaborn

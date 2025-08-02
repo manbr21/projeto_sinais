@@ -32,7 +32,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # === 5. Treinar Random Forest para obter ranking das features ===
-rf_full = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1)
+rf_full = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1, class_weight='balanced')
 rf_full.fit(X_train, y_train)
 
 # Obter as 15 melhores features
@@ -54,7 +54,7 @@ X_train_scaled = scaler.fit_transform(X_train_top15)
 X_test_scaled = scaler.transform(X_test_top15)
 
 # === 7. Treinar SVM ===
-svm_model = SVC(kernel="rbf", C=10, gamma="scale", random_state=42)
+svm_model = SVC(kernel="rbf", C=10, gamma="scale", random_state=42, class_weight='balanced')
 svm_model.fit(X_train_scaled, y_train)
 
 # === 8. Avaliar no teste ===
