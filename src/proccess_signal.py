@@ -264,18 +264,18 @@ def generate_csv(Y, path, tolerance_num, ch):
 
     Y_FINAL = Y_MERGE.drop(columns=['key_0', 'filename_lr'])
 
-    Y_FINAL.to_csv("features.csv")
+    Y_FINAL.to_csv(path + "generated_csv/features.csv")
     print("csv criado corretamente")
 
 if __name__ == "__main__":
     #parameters
     channels = [1,2,5,6,7,8] # channels to extract features
     tolerance_num = 5 # quantos picos devem ser detectados pra considerarmos um sinal válido
-    path = '' # replace to your path
+    path = '../' # replace to your path
     sampling_rate=100 # 100hz or 500hz
 
     # load and convert annotation data
-    Y = pd.read_csv(path + 'filtered_database.csv', index_col='ecg_id')
+    Y = pd.read_csv(path + 'generated_csv/filtered_database.csv', index_col='ecg_id')
     generate_csv(Y, path, tolerance_num, channels)
 
     # test one signal

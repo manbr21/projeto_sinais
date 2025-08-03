@@ -9,7 +9,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # === 1. Carregar CSV ===
-df = pd.read_csv("features.csv")
+df = pd.read_csv("../generated_csv/features.csv")
 
 # Remove coluna de índice desnecessária se existir
 if "Unnamed: 0" in df.columns:
