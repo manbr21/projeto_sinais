@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.signal import find_peaks
-from utils.foo import give_name
+from utils.foo import give_name, return_choose_vec
 from utils.filter_signal import apply_filters_with_padding
 
 def PSD(ecg_f,fs,low_interval, mid_interval, high_interval):
@@ -106,6 +106,8 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
 
             ch_name = give_name(i)
 
+            choose = return_choose_vec(ch_name)
+
             features = {
                 f'mean_rr_interval_s_{ch_name}': mean_rr,
                 f'std_rr_interval_s_{ch_name}': std_rr,
@@ -123,7 +125,15 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
                 f'band_energy_mid_{ch_name}': band_energy['mid'],
                 f'band_energy_high_{ch_name}': band_energy['high'],
             }
-            full_ch_features.append(features)
+            final_dict = {}
+            index = 0
+            for i in features.keys():
+                if choose[index]:
+                    final_dict[i] = features[i]
+                index+=1
+
+
+            full_ch_features.append(final_dict)
         
         new_feat = {}
         for i in full_ch_features:
