@@ -26,7 +26,7 @@ def generate_csv(Y, path, tolerance_num, ch):
         t = np.linspace(0, duration, data.sig_len)
 
         #sinal
-        features = extract_features(data, fs, channels, tolerance_num, data.sig_len / data.fs, data.sig_len)
+        features = extract_features(data, fs, ch, tolerance_num, data.sig_len / data.fs, data.sig_len)
         arr.append(features)
         
     features_df = pd.DataFrame(arr, index=Y.index)
@@ -39,14 +39,14 @@ def generate_csv(Y, path, tolerance_num, ch):
 
 if __name__ == "__main__":
     #parameters
-    channels = [1,2,5,6,7,8] # channels to extract features
+    channels = [0,1,2,3,4,5,6,7,8,9,10,11] # channels to extract features
     tolerance_num = 5 # quantos picos devem ser detectados pra considerarmos um sinal válido
     path = '../' # replace to your path
     sampling_rate=100 # 100hz or 500hz
 
     # load and convert annotation data
-    #Y = pd.read_csv(path + 'generated_csv/filtered_database.csv', index_col='ecg_id')
-    #generate_csv(Y, path, tolerance_num, channels)
+    Y = pd.read_csv(path + 'generated_csv/filtered_database.csv', index_col='ecg_id')
+    generate_csv(Y, path, tolerance_num, channels)
 
     # test one signal
     # test_feat = test_one_signal(path + "records100\\00000\\00016_lr", channels, tolerance_num)

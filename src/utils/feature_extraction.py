@@ -19,16 +19,13 @@ def PSD(ecg_f,fs,low_interval, mid_interval, high_interval):
         'high': np.sum(fft_vals[(fft_freqs >= high_interval[0]) & (fft_freqs < high_interval[1])]),
     }
 
-    peak_freq = fft_freqs[np.argmax(fft_vals)]
-
-    return [band_energy, peak_freq]
+    return band_energy
 
 def extract_r_peaks(ecg_f,distance,height,th_amp, th_samp):
     r_peaks, _ = find_peaks(ecg_f, distance=distance, height=height)
     #r_peaks = r_peaks[ecg_f[r_peaks] >= th_amp]
     r_peaks = r_peaks[r_peaks >= 40]
     r_peaks = r_peaks[r_peaks <= th_samp]
-    #heart_rate = 60 / mean_rr #bpm
     
     return r_peaks
 
@@ -105,7 +102,7 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
             
             mean_qrs, std_qrs = get_qrs_intervals(qrs_wave)
 
-            band_energy, peak_freq = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
+            band_energy = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
 
             ch_name = give_name(i)
 
@@ -125,7 +122,6 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
                 f'band_energy_low_{ch_name}': band_energy['low'],
                 f'band_energy_mid_{ch_name}': band_energy['mid'],
                 f'band_energy_high_{ch_name}': band_energy['high'],
-                f'dominant_frequency_Hz_{ch_name}': peak_freq
             }
             full_ch_features.append(features)
         
