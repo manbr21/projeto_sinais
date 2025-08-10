@@ -21,11 +21,12 @@ def PSD(ecg_f,fs,low_interval, mid_interval, high_interval):
 
     return band_energy
 
-def extract_r_peaks(ecg_f,distance,height,th_amp, th_samp):
+def extract_r_peaks(ecg_f, th_min,th_max):
+    distance = int(0.6 * 100)
+    height = np.mean(ecg_f)
     r_peaks, _ = find_peaks(ecg_f, distance=distance, height=height)
-    #r_peaks = r_peaks[ecg_f[r_peaks] >= th_amp]
-    r_peaks = r_peaks[r_peaks >= 40]
-    r_peaks = r_peaks[r_peaks <= th_samp]
+    r_peaks = r_peaks[r_peaks >= th_min]
+    r_peaks = r_peaks[r_peaks <= th_max]
     
     return r_peaks
 
@@ -79,6 +80,35 @@ def get_qrs_intervals(qrs_wave):
     std = np.std(qrs_i)
     return [mean,std]
 
+def st_features(ecg, fs, r_peaks):
+    features = []
+    for r in r_peaks:
+        # Ponto J ~ 60 ms após R
+        j_point = r + int(0.06 * fs)
+        
+        # Fim do ST ~ 200 ms após R
+        st_end = r + int(0.20 * fs)
+        
+        # Linha de base: média do PR segment (80ms antes do QRS)
+        baseline = np.mean(ecg[r - int(0.12 * fs): r - int(0.04 * fs)])
+        
+        # Elevação do ST (média 60-80ms após R menos baseline)
+        st_elev = np.mean(ecg[j_point : j_point + int(0.02 * fs)]) - baseline
+        
+        # Duração do ST
+        st_duration = (st_end - j_point) / fs
+        
+        # Inclinação do ST
+        x = np.arange(j_point, st_end)
+        y = ecg[j_point:st_end]
+        slope = np.polyfit(x, y, 1)[0]
+        
+        features.append((st_elev, st_duration, slope))
+    
+    return np.array(features)  # Cada linha: [elevação, duração, inclinação]
+
+
+
 def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
     full_ch_features = []
     for i in ch:
@@ -86,11 +116,12 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
         ecg_f = apply_filters_with_padding(ecg, fs)
 
         #peaks
-        r_peaks = extract_r_peaks(ecg_f, int(100*0.6), np.mean(ecg_f), 0.15, 959)
+        r_peaks = extract_r_peaks(ecg_f, 40, 959)
 
-        if len(r_peaks) >= tolerance_num:
+        if len(r_peaks) >= -1: #TODO: remove
             #print(r_peaks)
             q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave = extract_peaks(ecg_f, r_peaks)
+            
             # plot_with_peaks(ecg_f, duration, sig_len, [r_peaks,q_peaks, s_peaks, p_peaks, t_peaks, qrs_wave])
 
             #intervalos
@@ -102,6 +133,17 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
             
             mean_qrs, std_qrs = get_qrs_intervals(qrs_wave)
 
+            st_vals = st_features(ecg_f, fs, r_peaks)
+
+            st_elev_mean = np.mean(st_vals[:, 0])
+            st_elev_std  = np.std(st_vals[:, 0])
+
+            st_dur_mean = np.mean(st_vals[:, 1])
+            st_dur_std  = np.std(st_vals[:, 1])
+
+            st_slope_mean = np.mean(st_vals[:, 2])
+            st_slope_std  = np.std(st_vals[:, 2])
+
             band_energy = PSD(ecg_f,fs,(0.5,4), (4, 15), (15,40))
 
             ch_name = give_name(i)
@@ -109,21 +151,27 @@ def extract_features(data, fs, ch, tolerance_num, duration, sig_len):
             choose = return_choose_vec(ch_name)
 
             features = {
-                f'mean_rr_interval_s_{ch_name}': mean_rr,
-                f'std_rr_interval_s_{ch_name}': std_rr,
-                f'mean_qq_interval_s_{ch_name}': mean_qq,
-                f'std_qq_interval_s_{ch_name}': std_qq,
-                f'mean_ss_interval_s_{ch_name}': mean_ss,
-                f'std_ss_interval_s_{ch_name}': std_ss,
-                f'mean_pp_interval_s_{ch_name}': mean_pp,
-                f'std_pp_interval_s_{ch_name}': std_pp,
-                f'mean_tt_interval_s_{ch_name}': mean_tt,
-                f'std_tt_interval_s_{ch_name}': std_tt,
-                f'mean_qrs_{ch_name}':mean_qrs,
-                f'std_qrs_{ch_name}':std_qrs,
-                f'band_energy_low_{ch_name}': band_energy['low'],
-                f'band_energy_mid_{ch_name}': band_energy['mid'],
-                f'band_energy_high_{ch_name}': band_energy['high'],
+                f'{ch_name}_mean_rr_interval': mean_rr,
+                f'{ch_name}_std_rr_interval': std_rr,
+                f'{ch_name}_mean_qq_interval': mean_qq,
+                f'{ch_name}_std_qq_interval': std_qq,
+                f'{ch_name}_mean_ss_interval': mean_ss,
+                f'{ch_name}_std_ss_interval': std_ss,
+                f'{ch_name}_mean_pp_interval': mean_pp,
+                f'{ch_name}_std_pp_interval': std_pp,
+                f'{ch_name}_mean_tt_interval': mean_tt,
+                f'{ch_name}_std_tt_interval': std_tt,
+                f'{ch_name}_mean_qrs':mean_qrs,
+                f'{ch_name}_std_qrs':std_qrs,
+                f'{ch_name}_st_elev_mean':st_elev_mean,
+                f'{ch_name}_st_elev_std':st_elev_std,
+                f'{ch_name}_st_dur_mean':st_dur_mean,
+                f'{ch_name}_st_dur_std':st_dur_std,
+                f'{ch_name}_st_slope_mean':st_slope_mean,
+                f'{ch_name}_st_slope_std':st_slope_std,
+                f'{ch_name}_band_energy_low': band_energy['low'],
+                f'{ch_name}_band_energy_mid': band_energy['mid'],
+                f'{ch_name}_band_energy_high': band_energy['high'],
             }
             final_dict = {}
             index = 0

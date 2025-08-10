@@ -39,7 +39,25 @@ def generate_csv(Y, path, tolerance_num, ch):
 
 if __name__ == "__main__":
     #parameters
-    channels = [0,1,2,3,4,5,6,7,8,9,10,11] # channels to extract features
+    channels = [1,3,5,6,7,10] # channels to extract features
+    # se eu tirar algumas caracteristicas de certos canais posso melhorar?
+    # 76,95% de acurácia, como melhorar (muitos normais diagnosticados como infarto no miocardio)?
+    """
+    if i == 0:
+        return "I"
+    elif i == 1:
+        return "II"
+    elif i == 2:
+        return "III"
+    elif i == 3:
+        return "aVL"
+    elif i == 4:
+        return "aVR"
+    elif i == 5:
+        return "aVF"
+    else:
+        return f"V{i-5}"
+    """
     tolerance_num = 5 # quantos picos devem ser detectados pra considerarmos um sinal válido
     path = '../' # replace to your path
     sampling_rate=100 # 100hz or 500hz
