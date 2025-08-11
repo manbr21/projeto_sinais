@@ -3,7 +3,7 @@ import pywt
 from scipy.signal import butter, filtfilt
 
 def apply_filters_with_padding(signal, fs):
-    pad_size = 200  # ou fs//2, por exemplo
+    pad_size = min(200, len(signal)//2)
 
     # Espelha início e fim
     padded = np.concatenate([
@@ -24,7 +24,8 @@ def wavelet_denoise(signal, wavelet='sym4', level=4):
     coeffs = pywt.wavedec(signal, wavelet, level=level)
     threshold = np.median(np.abs(coeffs[-1])) / 0.6745 * np.sqrt(2 * np.log(len(signal)))
     coeffs_thresh = [pywt.threshold(c, threshold, mode='soft') if i > 0 else c for i, c in enumerate(coeffs)]
-    return pywt.waverec(coeffs_thresh, wavelet)
+    denoised = pywt.waverec(coeffs_thresh, wavelet)
+    return denoised[:len(signal)]
 
 def highpass_filter(signal, fs, cutoff=0.5, order=2):
     nyq = 0.5 * fs

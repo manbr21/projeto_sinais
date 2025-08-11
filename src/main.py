@@ -40,8 +40,7 @@ def generate_csv(Y, path, tolerance_num, ch):
 if __name__ == "__main__":
     #parameters
     channels = [1,3,5,6,7,10] # channels to extract features
-    # se eu tirar algumas caracteristicas de certos canais posso melhorar?
-    # 76,95% de acurácia, como melhorar (muitos normais diagnosticados como infarto no miocardio)?
+
     """
     if i == 0:
         return "I"
