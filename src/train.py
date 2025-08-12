@@ -77,7 +77,7 @@ for n_features in range(5, 219):
     y_pred = svm.predict(X_test_scaled)
     acc = accuracy_score(y_test, y_pred)
     results.append((n_features, acc, selected_feats, y_pred))
-    models.append(scaler)
+    models.append(svm)
 
     print(f"Com {n_features} features, acurácia SVM: {acc*100:.2f}%")
 
