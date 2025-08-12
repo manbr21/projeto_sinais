@@ -19,7 +19,7 @@ if "Unnamed: 0" in df.columns:
 df["diagnostic_superclass"] = df["diagnostic_superclass"].str.replace(r"[\[\]']", "", regex=True)
 
 # === 3. Dividir em teste e treino/validação ===
-remain_df, teste = train_test_split(df,test_size=0.2, stratify=df["diagnostic_superclass"], random_state=42)
+remain_df, teste = train_test_split(df,test_size=0.2, stratify=df["diagnostic_superclass"], random_state=20)
 teste.to_csv("../generated_csv/teste_split.csv")
 
 # === 4. Separar X e y ===
@@ -54,10 +54,11 @@ for rank, feat in enumerate(feature_names_sorted, start=1):
 
 # === 7. Testar SVM com diferentes números das top features ===
 results = []
+models = []
+scalers = []
 
-scaler = StandardScaler()
-
-for n_features in range(185, 186):
+for n_features in range(5, 219):
+    scaler = StandardScaler()
     selected_feats = feature_names_sorted[:n_features]
 
     X_train_sel = X_train[selected_feats]
@@ -67,8 +68,7 @@ for n_features in range(185, 186):
     X_train_scaled = scaler.fit_transform(X_train_sel)
     X_test_scaled = scaler.transform(X_test_sel)
 
-    with open("scaler.pkl", 'wb') as f:
-        pickle.dump(scaler, f)
+    scalers.append(scaler)
 
     # Treinar SVM
     svm = SVC(kernel="rbf", C=10, gamma="scale", random_state=42, class_weight='balanced')
@@ -77,11 +77,13 @@ for n_features in range(185, 186):
     y_pred = svm.predict(X_test_scaled)
     acc = accuracy_score(y_test, y_pred)
     results.append((n_features, acc, selected_feats, y_pred))
+    models.append(scaler)
 
     print(f"Com {n_features} features, acurácia SVM: {acc*100:.2f}%")
 
 # === 8. Melhor resultado ===
 best = max(results, key=lambda x: x[1])
+best_i = np.argmax([r[1] for r in results])
 best_n, best_acc, best_feats, best_pred = best
 
 print(f"\n✅ Melhor acurácia com {best_n} features: {best_acc*100:.2f}%")
@@ -102,7 +104,22 @@ plt.title(f"Matriz de Confusão - SVM com {best_n} melhores features")
 plt.tight_layout()
 plt.show()
 
+df_results = pd.DataFrame(results, columns=["n_features", "accuracy", "features", "y_pred"])
+
+# Plotando acurácia vs número de features
+plt.figure(figsize=(8, 5))
+sns.lineplot(x="n_features", y="accuracy", data=df_results, marker="o")
+plt.scatter(best_n, best_acc, color="red", s=100, zorder=5)  # ponto ótimo
+plt.text(best_n, best_acc, f"{best_acc:.2f}", color="red", ha="left")
+plt.xlabel("Quantidade de Features")
+plt.ylabel("Acurácia")
+plt.title("Acurácia vs Quantidade de Features")
+plt.grid(True)
+plt.show()
 
 # === 9. Salvando modelo como um pickle ===
 with open("model.pkl", 'wb') as f:
-    pickle.dump(svm, f)
+    pickle.dump(models[best_i], f)
+
+with open("scaler.pkl", 'wb') as f:
+    pickle.dump(scalers[best_i], f)
