@@ -7,6 +7,7 @@ from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
+import pickle
 
 # === 1. Carregar CSV ===
 df = pd.read_csv("../generated_csv/features.csv")
@@ -17,20 +18,24 @@ if "Unnamed: 0" in df.columns:
 # === 2. Limpar coluna de rótulos ===
 df["diagnostic_superclass"] = df["diagnostic_superclass"].str.replace(r"[\[\]']", "", regex=True)
 
-# === 3. Separar X e y ===
-X = df.drop(columns=["diagnostic_superclass"])
-y = df["diagnostic_superclass"]
+# === 3. Dividir em teste e treino/validação ===
+remain_df, teste = train_test_split(df,test_size=0.2, stratify=df["diagnostic_superclass"], random_state=42)
+teste.to_csv("../generated_csv/teste_split.csv")
+
+# === 4. Separar X e y ===
+X = remain_df.drop(columns=["diagnostic_superclass"])
+y = remain_df["diagnostic_superclass"]
 
 # Codificar classes
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
-# === 4. Dividir treino/teste ===
+# === 5. Dividir treino/teste ===
 X_train, X_test, y_train, y_test = train_test_split(
     X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
 )
 
-# === 5. Treinar Random Forest para ranking das features ===
+# === 6. Treinar Random Forest para ranking das features ===
 rf = RandomForestClassifier(
     n_estimators=200,
     random_state=42,
@@ -47,12 +52,12 @@ print("\n=== Ranking completo das features ===")
 for rank, feat in enumerate(feature_names_sorted, start=1):
     print(f"{rank:2d}. {feat:30s} -> {importances[indices[rank-1]]:.4f}")
 
-# === 6. Testar SVM com diferentes números das top features ===
+# === 7. Testar SVM com diferentes números das top features ===
 results = []
 
 scaler = StandardScaler()
 
-for n_features in range(5, 219):
+for n_features in range(185, 186):
     selected_feats = feature_names_sorted[:n_features]
 
     X_train_sel = X_train[selected_feats]
@@ -61,6 +66,9 @@ for n_features in range(5, 219):
     # Escalar
     X_train_scaled = scaler.fit_transform(X_train_sel)
     X_test_scaled = scaler.transform(X_test_sel)
+
+    with open("scaler.pkl", 'wb') as f:
+        pickle.dump(scaler, f)
 
     # Treinar SVM
     svm = SVC(kernel="rbf", C=10, gamma="scale", random_state=42, class_weight='balanced')
@@ -72,7 +80,7 @@ for n_features in range(5, 219):
 
     print(f"Com {n_features} features, acurácia SVM: {acc*100:.2f}%")
 
-# === 7. Melhor resultado ===
+# === 8. Melhor resultado ===
 best = max(results, key=lambda x: x[1])
 best_n, best_acc, best_feats, best_pred = best
 
@@ -93,3 +101,8 @@ plt.ylabel("Real")
 plt.title(f"Matriz de Confusão - SVM com {best_n} melhores features")
 plt.tight_layout()
 plt.show()
+
+
+# === 9. Salvando modelo como um pickle ===
+with open("model.pkl", 'wb') as f:
+    pickle.dump(svm, f)
