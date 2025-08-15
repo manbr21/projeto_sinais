@@ -1,4 +1,3 @@
-import pickle
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import pandas as pd
