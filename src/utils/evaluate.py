@@ -21,7 +21,7 @@ def evaluate(model, scaler, features):
     result = accuracy_score(y_encoded, y_predict)
     return result
 
-def evaluate_best(model, scaler, features):
+def evaluate_best(model, scaler, features, qtd):
     df = pd.read_csv('../generated_csv/teste_split.csv')
 
     X = df[features]
@@ -43,6 +43,6 @@ def evaluate_best(model, scaler, features):
                 xticklabels=le.classes_, yticklabels=le.classes_)
     plt.xlabel("Predito")
     plt.ylabel("Real")
-    plt.title(f"Matriz de Confusão - SVM")
+    plt.title(f"Matriz de Confusão - SVM com {qtd} melhores features")
     plt.tight_layout()
     plt.show()

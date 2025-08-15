@@ -18,6 +18,7 @@ if "Unnamed: 0" in df.columns:
 nan_feat = df.isna().sum()
 cols_to_drop = nan_feat[nan_feat == 12084].index
 df = df.drop(columns=cols_to_drop)
+#df.fillna(0,inplace=True)
 
 # === 2. Limpar coluna de rótulos ===
 df["diagnostic_superclass"] = df["diagnostic_superclass"].str.replace(r"[\[\]']", "", regex=True)
@@ -64,7 +65,7 @@ features = []
 scalers = []
 #len(df.columns - 1)
 
-for n_features in range(5, 10):
+for n_features in range(5, len(df.columns)-1):
     scaler = StandardScaler()
     selected_feats = feature_names_sorted[:n_features]
 
@@ -99,6 +100,10 @@ best = max(results, key=lambda x: x[1])
 best_i = np.argmax([r[1] for r in results])
 best_n, best_acc, best_feats, best_pred = best
 
+best_test = max(results_test, key=lambda x: x[1])
+best_i_test = np.argmax([r[1] for r in results_test])
+best_test_n, best_test_acc, best_test_feats, best_test_pred = best_test
+
 print(f"\n✅ Melhor acurácia com {best_n} features: {best_acc*100:.2f}%")
 print("Features usadas:")
 print(best_feats)
@@ -126,6 +131,9 @@ plt.figure(figsize=(8, 5))
 sns.lineplot(x="n_features", y="accuracy", data=df_results, marker="o", label="Treino")
 sns.lineplot(x="n_features", y="accuracy", data=df_results_test, marker="o", label="Teste")
 
+plt.scatter(best_test_n, best_test_acc, color="green", s=100, zorder=5)
+plt.text(best_test_n, best_test_acc, f"{best_test_acc:.2f}", color="green", ha="left")
+
 plt.scatter(best_n, best_acc, color="red", s=100, zorder=5)  # ponto ótimo
 plt.text(best_n, best_acc, f"{best_acc:.2f}", color="red", ha="left")
 plt.xlabel("Quantidade de Features")
@@ -134,4 +142,4 @@ plt.title("Acurácia vs Quantidade de Features")
 plt.grid(True)
 plt.show()
 
-evaluate_best(models[best_i], scalers[best_i], features[best_i])
+evaluate_best(models[best_i_test], scalers[best_i_test], features[best_i_test], len(features[best_i_test]))
