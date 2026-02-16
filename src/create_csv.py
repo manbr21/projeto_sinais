@@ -6,11 +6,9 @@ dest_path = "../generated_csv/"
 
 sampling_rate=100
 
-# load and convert annotation data
 Y = pd.read_csv(src_path + 'ptbxl_database.csv', index_col='ecg_id')
 Y.scp_codes = Y.scp_codes.apply(lambda x: ast.literal_eval(x))
 
-# Load scp_statements.csv for diagnostic aggregation
 agg_df = pd.read_csv(src_path + 'scp_statements.csv', index_col=0)
 agg_df = agg_df[agg_df.diagnostic == 1]
 
@@ -24,7 +22,6 @@ def aggregate_diagnostic(y_dic):
     
     if len(app) == 1:
         for key in y_dic.keys():
-            #print(y_dic.values())
             if key in agg_df.index:
                 if (agg_df.loc[key].diagnostic_class == "NORM" or agg_df.loc[key].diagnostic_class == "MI" or agg_df.loc[key].diagnostic_class == "CD"):
                     tmp.append(agg_df.loc[key].diagnostic_class)
@@ -33,7 +30,6 @@ def aggregate_diagnostic(y_dic):
 
     return []
 
-# Apply diagnostic superclass
 Y['diagnostic_superclass'] = Y.scp_codes.apply(aggregate_diagnostic)
 columns = ['age', 'sex', 'filename_lr', 'diagnostic_superclass']
 Y_FILTERED = Y[Y['diagnostic_superclass'].apply(lambda x: 'NORM' in x or 'MI' in x or 'CD' in x)]
